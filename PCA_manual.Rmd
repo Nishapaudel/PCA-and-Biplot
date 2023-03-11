@@ -1,0 +1,135 @@
+---
+title: "PCA"
+author: "Nisha_paudel"
+date: "2023-03-10"
+output: 
+  html_document:
+    theme: flatly
+    toc: true
+    toc_depth: 2
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## PCA
+
+It is an unsupervised ML techique to cluster the data. Linear transformation methods to reduce the dimension of data. PCA yields the directions (principal components) that maximize the variance of the data.
+
+Two forms of PCA;
+
+PCA of a covariance or PCA correlation matrix.
+
+The difference between these is can be most easily understood in the data pre-processing. PCA was computed as a singular value decomposition (SVD) of a column centered, scaled matrix is PCA of the correlation matrix. **If the matrix is centered but not scaled**, it is PCA of the covariance matrix.
+
+-   PCA of a correlation matrix = svd of **scaled**, centered, matrix (z-score matrix)
+
+-   PCA of a covariance matrix can be computed as svd of **unscaled**, centered, matrix
+
+    Center a matrix Recall we had two vector x_obs, y_obs. We can center these columns by subtracting the column mean from each object in the column. We can perform PCA of the covariance matrix is several ways.
+
+    -   SVD of the centered matrix
+
+    -   eigenanalysis of the centered, covariance matrix
+
+    -   using prcomp with scale=FALSE (which is the default)
+
+        ![](images/20230311_123813%20(1).jpg){width="669"}
+
+        ## Read data
+
+```{r}
+data <- as.matrix(read.csv("/home/nisha/Desktop/pathway_analysis/rgd/voom_transformed.csv", sep=',',row.names = 1))
+
+```
+
+## Prcomp : PCA function
+
+t : transpose the matrix
+
+For non normalised data, **it is highly recommended to set the argument scale=TRUE**. This standardize the input data so that it has zero mean and variance one before doing PCA,
+
+Since our data is already normalised we use Scale = FALSE., The covariance matrix defines both the spread (variance) and the orientation (covariance) of our data.
+
+```{r}
+#covariance
+pca <- prcomp(t(data), scale=FALSE)
+```
+
+prcomp returns three things
+
+1.  x - contains all PCs for drawing a graph, since there are 47 samples there will be 47 PCs, first PC accounts the most variation that appears in all 47 samples, second PC second most. The principal component scores are stored in `x` attribute of the `prcomp` object. We take a look at the first 10 entries of `pca$x` by applying the `head()` function.
+
+2.  sdev - the standard deviations of the principal components (i.e., the square roots of the eigenvalues of the covariance/correlation matrix, though the calculation is actually done with the singular values of the data matrix).
+
+3.  rotation - the matrix of variable loadings (i.e., a matrix whose columns contain the eigenvectors).The `prcomp` object stores the eigenvectors as a matrix in the `rotation` attribute
+
+```{r}
+names(pca)
+
+```
+
+## PCscores
+
+```{r}
+PCscores <- pca$x
+#head(eigenvect)
+x1 <-as.data.frame(PCscores[,1])
+head(x1)
+```
+
+## Scree plot
+
+```{r}
+## make a scree plot
+pca.var <- pca$sdev^2
+pca.var.per <- round(pca.var/sum(pca.var)*100, 1)
+ 
+barplot(pca.var.per, main="Scree Plot", xlab="Principal Component", ylab="Percent Variation")
+```
+
+## Top 20 genes in PC 1 / Top 20 eigen Vectors from PC1
+
+```{r}
+## get the name of the top 20 measurements (genes) that contribute
+## most to pc1.
+loading_scores <- pca$rotation[,1]
+head(loading_scores)
+gene_scores <- abs(loading_scores) ## get the magnitudes because from center there may be positive and negative values
+gene_score_ranked <- sort(gene_scores, decreasing=TRUE)
+
+```
+
+```{r}
+top_20_genes <- names(gene_score_ranked[1:20])
+top_20_genes
+```
+
+## Correlation-based PCA 
+
+can be computed by singular value decomposition (svd) of centered and scaled matrix. So we can repeat the code above but **scale** and **center** the data with [`scale(P, center=TRUE, scale=TRUE)`](https://rdrr.io/r/base/scale.html).
+
+## PCA - PC2 vs PC3
+
+```{r}
+meta <- read.csv("/home/nisha/Desktop/New_Richa_RNA_seq/design.txt", header = TRUE, sep = ",", row.names = 1)
+
+```
+
+```{r}
+library(ggplot2)
+ # Create data frame with metadata and PC3 and PC4 values for input to ggplot
+ df <- cbind(meta, pca$x)
+# df
+ ggplot(df) + geom_point(aes(x=PC2, y=PC3, color = condition))
+```
+
+## Biplot
+
+Resources for this <https://bioconductor.org/packages/release/bioc/vignettes/PCAtools/inst/doc/PCAtools.html>
+
+## Biplot resource 
+
+<https://rmiteduau-my.sharepoint.com/personal/s3971121_student_rmit_edu_au/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fs3971121%5Fstudent%5Frmit%5Fedu%5Fau%2FDocuments%2FProject%200%20%2D%20RNA%20seq%20data%20analysis%2FBiplot%5FPCA%5Frna%5Fseq%2Ehtml&parent=%2Fpersonal%2Fs3971121%5Fstudent%5Frmit%5Fedu%5Fau%2FDocuments%2FProject%200%20%2D%20RNA%20seq%20data%20analysis>
